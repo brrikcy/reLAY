@@ -1,0 +1,344 @@
+RELAY — SYSTEM AUDIT, GROK RESEARCH & FEATURE IMPLEMENTATION
+================================================================
+Audit date: November 20, 2026 (initial browser work began November 19, 2026)
+Application audited: Relay local-first agent workspace, http://127.0.0.1:8787
+Auditor method: browser interaction first, then targeted source/runtime inspection and automated tests.
+
+VERIFICATION LEGEND
+-------------------
+VERIFIED-BROWSER = directly exercised in the application UI or through browser network calls.
+VERIFIED-LIVE = exercised with the real AWS Bedrock/DeepSeek and/or AWS Transcribe service.
+VERIFIED-TEST = covered by repeatable automated unit/integration tests.
+LIMITED = implemented but with explicit scope, dependency, or environment restrictions.
+UNVERIFIED = not established by a successful test in this audit.
+NOT-IN-SCOPE = deliberately not implemented; must not be presented as available.
+
+================================================================
+PHASE 1 — FEATURE INVENTORY AND BROWSER EVIDENCE
+================================================================
+
+1. PERSISTENT BOT ROSTER AND CONFIGURATION
+Purpose: named specialists with persistent instructions, model provider, role, color, and tool assignments.
+Usage: select Scout, Atlas, or Echo in the left roster; open bot name or ellipsis settings.
+Observed: all three are configured for AWS Bedrock DeepSeek V3.2. Settings exposes name, role, description, instructions, provider, color, and connected tools. Scout has 12 assigned tools; Atlas 10; Echo 6.
+Dependencies: SQLite, configured model provider, assigned tool definitions.
+Status: VERIFIED-BROWSER.
+
+2. ONE-TO-ONE CHAT
+Purpose: normal conversation with a selected specialist, with messages and recorded activity.
+Usage: select a bot and type in Message <bot>, Enter to send or Shift+Enter for newline.
+Observed: real Bedrock responses, prior messages persisted across reloads, errors displayed in transcript. The old failed 8-step run is retained as historical evidence.
+Dependencies: AWS SSO profile `bedrock`, Bedrock Converse, DeepSeek V3.2, local Node server.
+Status: VERIFIED-BROWSER / VERIFIED-LIVE.
+
+3. GROUP ROOMS AND SHARED TRANSCRIPT
+Purpose: one shared conversation for multiple specialists, with default coordinator, @mentions, and multiple recipients.
+Usage: Team rooms > select members or Everyone > type and send. New room creates a named room with 2–6 bots and a coordinator.
+Observed: a new `QA delegation room` was created through the UI. Real group messages from Scout, Atlas, and Echo appeared with sender labels and shared history. The team roster exposes live member state.
+Dependencies: SQLite groups/group_messages, EventSource live updates, bot providers.
+Status: VERIFIED-BROWSER / VERIFIED-LIVE.
+
+4. SPECIALIST HANDOFFS
+Purpose: delegate a focused subtask to another room specialist and use the returned result.
+Usage: ask a room member to delegate to another member; the room shows Specialist handoff and actual result.
+Observed: Scout delegated to Atlas to write a concise plan into PROJECT_PLAN.md. Atlas proposed the write, approval was displayed, the write completed, Atlas returned the saved-plan result, and Scout subsequently summarized it. Coordinator run completed.
+Dependencies: delegation tool, group context, child run, bounded depth of 2, result wait timeout of 90 seconds.
+Status: VERIFIED-BROWSER / VERIFIED-LIVE / VERIFIED-TEST (tests/group.test.ts).
+Important fix: earlier code returned only `accepted` and could lose tool evidence. Now waits for the child result and passes it to the coordinator.
+
+5. GROUP APPROVALS
+Purpose: prevent consequential tool actions without explicit user review, within the room.
+Usage: when a room specialist requests an approval-gated tool, review the card and choose Allow once or Deny.
+Observed: Atlas’s create_project_file request appeared in the shared room as `ROOM APPROVAL` with full JSON arguments. Browser click on Allow once returned HTTP 200, the card disappeared, and the delegated run completed.
+Dependencies: approval API, room-scoped approval endpoint, SSE group notification.
+Status: VERIFIED-BROWSER / VERIFIED-LIVE.
+Important fix: approval requests now publish group updates immediately, including during child runs.
+
+6. MEMORY AND PERSONALIZATION
+Purpose: durable preferences, facts, rules, and work logs for each bot.
+Usage: Memory tab in the right inspector; add memory manually or use “Remember that …”, “What do you remember?”, “Forget that …”.
+Observed: two saved Scout memories were displayed: a concise-research preference and a work log from a real weather run. Add/delete controls are visible. Memory is per bot, not automatically shared with other bots.
+Dependencies: SQLite memories; bounded memory context in system prompt.
+Status: VERIFIED-BROWSER for display/persistence; command path previously live-tested. No automatic claim of complete memory reliability.
+Limitations: November 20 update adds bounded local lexical relevance using meaningful term coverage and phrase matching, with pinned rules/preferences and up to 25 selected memories. Older relevant facts can be selected. This is not neural embedding/vector search, memory editing UI, or a guarantee against stale facts. Secrets must not be saved as memories.
+
+7. ACTIVITY TIMELINE AND RUN HISTORY
+Purpose: inspect recorded model calls, tool calls, statuses, and outcomes, without claiming hidden reasoning is visible.
+Usage: individual bot > Activity; History & search for global runs.
+Observed: old timeline showed model/tool events and completed status. Global History page showed 18 recorded runs, 17 completed, 15 tool calls, 32 model calls at the time of audit. Each run links back to bot or group.
+Dependencies: SQLite runs/run_events.
+Status: VERIFIED-BROWSER. Activity reconciles after SSE interruption and server restart.
+
+8. HISTORY SEARCH AND EXPORT
+Purpose: find prior messages and export a local history copy.
+Usage: History & search > type at least 2 characters; click result to open bot. Export history downloads JSON.
+Observed: searching “Errand Buddy” returned 3 real Atlas matches. Browser network request `/api/search?q=Errand%20Buddy` completed HTTP 304. Export history button is enabled. Group export endpoint is exposed in the room header.
+Dependencies: SQLite LIKE search, JSON Blob/export endpoint.
+Status: VERIFIED-BROWSER for search and export UI; file download response verified separately below. November 20 update: direct and group messages are merged in one `/api/search` result set. Browser search found the actual QA webhook routine message; the same endpoint returned a real shared-room welcome message.
+
+9. BUILT-IN PUBLIC RESEARCH AND DATA TOOLS
+Purpose: obtain public evidence/current information instead of relying on model memory.
+Available:
+- search_wikipedia: Wikimedia background search.
+- search_news: Google News RSS headlines, dates, publishers, and links.
+- geocode_city: Open-Meteo geocoding.
+- get_weather: Open-Meteo current weather/forecast.
+- lookup_country: countries.dev country facts.
+- get_exchange_rates: Frankfurter rates.
+- get_public_holidays: Nager.Date holidays.
+Usage: assign through bot settings or Connections; tool health buttons test built-ins.
+Observed: all built-in health checks returned HTTP 200 in earlier live checks. DeepSeek used geocoding then weather and returned Singapore’s live temperature. News tool returned a sourced Bedrock development summary. Latest failed Android-research run had 3 successful news calls followed by a duplicate-call stop, not a network outage.
+Dependencies: public internet, third-party availability, reviewed-host IPv4 compatibility path, timeouts, response limits.
+Status: VERIFIED-LIVE for tools; source coverage is limited. News remains headlines/metadata. November 20 update: `fetch_webpage` performs bounded, read-only public HTML extraction with source URL, title, text length, and truncation/access warnings. A live request to https://en.wikipedia.org/wiki/Amazon_Bedrock returned HTTP 200 and 3,996 extracted characters with `truncated: false` for that response. It is not a JavaScript browser, X connector, or paywall bypass.
+
+10. CUSTOM REST API INTEGRATIONS
+Purpose: connect user APIs as typed tools with schema validation and secret headers.
+Usage: Connections > Connect an API; configure method, URL/template, JSON Schema, headers, permission, and assign to bot.
+Observed: Connections page lists 12 tools, endpoint details, permission labels, assigned bots, and built-in health-check actions. Custom tool forms support GET/POST/PUT/PATCH/DELETE, query/body mapping, and approval policies.
+Dependencies: user API and credentials; standard server-side HTTP execution; custom SSRF safeguards.
+Status: VERIFIED-BROWSER for UI; custom HTTP behavior VERIFIED-TEST. No production OAuth marketplace or managed app connector catalog.
+Security limitation: secret headers are excluded from browser responses/model tool definitions but stored unencrypted in local SQLite in this development version.
+
+11. PROJECT ARTIFACTS / FILES
+Purpose: produce real files rather than only describing code or documents.
+Usage: ask a bot for a small project/document; approve file write; open Project files to preview/download/delete.
+Observed: Atlas created PROJECT_PLAN.md after approval. Preview shows actual BudgetBuddy plan content (5,151 bytes) and a working `/api/workspace/files/PROJECT_PLAN.md/download` link. Existing README.md also previewed successfully. Path validation and file-size bounds are enforced.
+Dependencies: local `workspace/` directory, bounded path resolver, SQLite file index, approval policy.
+Status: VERIFIED-BROWSER / VERIFIED-LIVE / VERIFIED-TEST. A screenshot of the actual generated project file was captured for the earlier README workflow; group screenshot also proves saved-plan workflow.
+Limitations: no native Android build/emulator, arbitrary shell execution, deployment, cloud computer, or production release evidence. Only predefined validation commands are available.
+
+12. REUSABLE SKILLS AND ROUTINES
+Purpose: save a useful workflow and optionally run it repeatedly.
+Usage: Project files > Reusable skills; individual bot > Routines > Create routine; test first, then enable.
+Observed: four skills are displayed: Build a project scaffold, Clear communication draft, Morning action brief, Sourced research brief. Routine panel shows create/test/pause controls and online-server warning.
+Dependencies: SQLite skills/routines, scheduler online, model/tool policies.
+Status: VERIFIED-BROWSER for skills/routine UI; routine behavior VERIFIED-TEST. Scheduled cloud execution while server is stopped is not available. November 20 update: authenticated webhook routines are implemented. A paused routine was created through the real modal, its one-time key dialog was shown, the generated key accepted a real event, duplicate delivery returned HTTP 409, and the routine was paused again. Keys are stored hashed; accepted/completed trigger records are durable. Interval scheduling remains UTC interval-based; timezone is stored/displayed but not a cron scheduler.
+
+13. VOICE ROOM
+Purpose: speak to room specialists and hear responses.
+Usage: Team rooms > Start live voice > allow microphone > hold mic button while speaking > release to send. Leave/end live room to stop.
+Observed: live room reaches `Listening…` with `Leave live room` and no browser console errors. UI explicitly states AWS Transcribe audio streaming, DeepSeek text processing, device speech synthesis, and no Relay audio storage.
+Dependencies: browser getUserMedia/AudioContext/WebSocket, AWS Transcribe Streaming, AWS SSO, speechSynthesis for replies.
+Status: VERIFIED-BROWSER for connection/readiness; VERIFIED-LIVE for actual transcription using generated PCM test audio. Real physical-microphone speech was not independently verified in this environment.
+Evidence: AWS returned full phrase “Hello team, please give me a short research briefing about Amazon Bedrock.” and `utterance_complete` after lifecycle fix.
+
+14. PROVIDER SETTINGS AND SECURITY BOUNDARIES
+Purpose: configure DeepSeek/Bedrock or other compatible APIs without lock-in.
+Usage: Settings > Model providers > configure; provider form supports Bedrock region/profile/model/max steps/max output tokens.
+Observed: Bedrock DeepSeek V3.2 configured with `us-east-1`, `bedrock` SSO profile, 8 steps, 2048 output tokens. No AWS password field is shown. Local SQLite/credential limitations are disclosed.
+Dependencies: AWS SDK provider chain and IAM access; optional OpenAI-compatible endpoints.
+Status: VERIFIED-BROWSER / VERIFIED-LIVE for Bedrock. Other provider presets not verified with paid credentials.
+
+================================================================
+PHASE 2 — RESEARCH: OFFICIAL CAPABILITIES AND USER EXPERIENCE
+================================================================
+
+A. OFFICIAL SOURCES (reviewed November 19–20, 2026)
+
+- Grok Bot overview: https://docs.x.ai/grok-bot/overview
+- How Grok Bot works: https://docs.x.ai/grok-bot/how-grok-bot-works
+- Use cases: https://docs.x.ai/grok-bot/use-cases
+- Skills/routines: https://docs.x.ai/grok-bot/skills-routines-and-automations
+- Computer/apps: https://docs.x.ai/grok-bot/computer-and-apps
+- Approvals/security/privacy: https://docs.x.ai/grok-bot/approvals-security-and-privacy
+- Files/results: https://docs.x.ai/grok-bot/files-and-results
+- Teams/enterprise: https://docs.x.ai/grok-bot/teams-and-enterprises
+- Design for persistent agents: https://x.ai/news/designing-grok-bot
+- Grok Bot 101 / practical guide: https://x.ai/bot/guides/grok-bot-101
+- Consumer Grok help: https://grok.com/help
+- Consumer FAQ: https://grok.com/faq
+- xAI function calling: https://docs.x.ai/developers/tools/function-calling
+- Official status/incidents: https://status.x.ai/grok-bot
+
+Documented Grok/Grok Bot capabilities (do not conflate consumer Grok with Bot):
+- persistent cloud computer, browser/files/terminal, work while laptop is closed;
+- specialist bots with memory, shared account computer, group chats and delegation;
+- skills/routines, schedules and event/webhook triggers, teach-by-demonstration;
+- app connectors/MCP and browser fallback;
+- secure credential handling/vault/secure forms and Auto Review approvals;
+- artifacts, files, dynamic pages, documents and computer outputs;
+- voice interaction across supported devices, connected apps/team bots and enterprise controls;
+- consumer Grok live search/X integration, reasoning/multi-agent modes, image/video generation, document/image analysis, Canvas and personalization;
+- plan/device/region limitations and shared weekly usage allowances.
+
+B. FIRST-HAND / COMMUNITY SOURCES
+
+The following are anecdotes or recurring reports, not universal proof of performance. Public social content is unevenly accessible; claims were not treated as verified when an original post/comment could not be independently checked.
+
+1. “One week with Grok Bot — what worked and what didn’t”
+https://sudheerpaturi.com/ai/one-week-with-grok-bot-what-actually-worked-and-what-didnt
+Individual experience: voice is especially useful for unstructured brainstorming and moving from talk to action.
+Relevance: voice must be a first-class workflow, not a decorative microphone icon.
+
+2. “Grok Bot after 67 real jobs”
+https://velvetshark.com/grok-bot-after-67-real-jobs
+Individual detailed experience: Chief-of-staff delegation, multiple accounts/connectors, and Auto Review catching risky actions.
+Relevance: useful delegation and approval boundaries are more valuable than a large superficial feature list.
+
+3. eesel Grok Bot review
+https://www.eesel.ai/blog/grok-bot-review
+Individual experience: teach-by-demonstration and generated skills need human decision rules and refinement.
+Relevance: reusable workflows should be reviewable, testable, and editable rather than magically self-managing.
+
+4. GrokMag limits discussion
+https://grokmag.com/grok-bot/limits/
+Community/review claims: browser automation is fragile, browser profiles reset, long sessions can fail, some sites block agents.
+Relevance: prefer structured API connectors and explicit partial results over fragile browser-only automation.
+
+5. Cellcog Grok Bot problems
+https://cellcog.ai/blog/grok-bot-problems
+Individual report: a stuck shared computer can block all bots and require reset.
+Relevance: avoid single global worker failure and expose recoverable run state/timeouts.
+
+6. Jonathan Montoya limitations article
+https://jonathanmontoya.com/post/grok-bot-limitations
+User/community report: routine approvals can expire around 30 minutes and unattended work may not retry/notify.
+Relevance: routines need explicit approval state, pause/test behavior, and failure visibility.
+
+7. Reddit r/GrokBot usage-limit discussion
+https://www.reddit.com/r/GrokBot/comments/1xy7kyq/absolutely_unusable/
+Recurring community complaints: allowance can be consumed quickly by many agents/routines, even on expensive plans.
+Relevance: explicit steps, token caps, run history and no uncontrolled bot loops are product requirements.
+
+8. Reddit Grok memory/voice complaints
+https://www.reddit.com/r/grok/comments/1q6o771/grok_suddenly_lost_its_memory/
+https://reddit.com/r/grok/comments/1t7u4gr/memory_issue_in_voicemode
+https://reddit.com/r/grok/comments/1q91wrg/ai_forgets_everything_in_a_topic_when_switching
+Individual/recurring complaints: memory and voice history can feel inconsistent or disappear.
+Relevance: make durable memory reviewable/deletable and do not imply perfect continuity.
+
+9. YouTube/public demonstrations (not independent performance benchmarks)
+- Organizing my life with Grok Bot: https://youtube.com/watch?v=zRNY93MtwFs
+- Grok Bot runs my four companies / 33 agents: https://youtube.com/watch?v=K50RWDJLh9o
+- 7 Grok Bot agents used every day: https://youtube.com/watch?v=QBmgF1kJSK4
+- AI skeptic / practical workflows: https://youtube.com/watch?v=qXGfR8oB1j4
+Observed use cases: daily briefings, personal admin, monitoring trends, chief-of-staff coordination, marketing, recurring routines, multiple specialist bots.
+Limitations: demonstrations are not evidence of universal reliability or cost-effectiveness.
+
+10. Grok status / incident history
+https://status.x.ai/grok-bot
+Official incidents: computer-use degradation, elevated errors, Auto Review degradation, and routine triggering issues were reported during the research window.
+Relevance: even polished managed agents have infrastructure failures; error recovery and truthful status matter.
+
+================================================================
+PHASE 3 — FEATURE COMPARISON AND GAP ANALYSIS
+================================================================
+
+| Feature | My System | Grok | User Feedback | Gap | Priority |
+|---|---|---|---|---|---|
+| One-to-one chat | Real Bedrock chat, history | Multi-platform chat/models | Core expected capability | Model/provider variety less broad | P2 |
+| Group specialist rooms | Shared rooms, @mentions, real handoffs | Group bots and shared coordination | Highly valued when reliable | Added and browser-verified; smaller rooms/depth limit | P1 addressed |
+| Actual handoff result | Coordinator waits for child result | Bots pass work asynchronously | Confusing if accepted without output | Fixed during audit | P0 addressed |
+| Approval in room | Full in-room approval card/resume | Auto Review cards/rules | Approval friction is a common issue | Fixed during audit | P0 addressed |
+| Voice | AWS Transcribe + push-to-talk + TTS | Natural voice across supported devices | Favorite interface for some users | Real transcription verified; no continuous native-model audio | P1 partly addressed |
+| Memory | Reviewable per-bot memory/work logs + local lexical relevance | Bot memory/preferences/history | Users report forgetfulness/inconsistency | Local term/phrase recall added; no neural semantic retrieval/editing/shared profile controls | P2 partly addressed |
+| Current research | News RSS + Wikipedia + bounded public HTML extraction | Live web/X/deep search/full browser | Current evidence expected | Public article text added; no X search, JS browser, or guaranteed full-page coverage | P1 partly addressed |
+| File handling/artifacts | Bounded real files, preview/download/delete, text/PDF attachments | Cloud files/pages/artifacts/uploads | Users want usable outputs | Text/PDF context added; no OCR/office/media extraction, image understanding, or rich pages | P1 partly addressed |
+| Skills | Reusable instruction skills and scaffold skill | Teach by demo, shared skills | Useful if testable and refined | No demonstration recorder or skill editor | P2 |
+| Routines | Interval, daily-local-time, authenticated webhook routines, queued execution, history | Cloud schedules/events/webhooks | Approval expiry/usage/reliability complaints | Durable queue/retry and local-time scheduling added; no cloud execution, external notification service, or full cron editor | P1 largely addressed |
+| Project execution | Bounded file writes and fixed validations | Real cloud computer/browser/terminal | Builds are valued when actual | No general safe code sandbox, dependencies/install, deployment, Android builds | P1 remaining |
+| Custom APIs | REST+JSON Schema+secret headers | MCP/plugins/app catalog/browser fallback | APIs preferred over fragile browser automation | No OAuth wizard/MCP transport | P1 remaining |
+| Search/history | Unified direct/group message search, run history, export | Cross-platform history/search | Users want to resume work | Unified local search added; no semantic/vector retrieval | P2 partly addressed |
+| Privacy/security | Local-first, no AWS keys stored, approval policies | Vault/Secure Forms/enterprise controls | Shared credentials and privacy concerns | No encrypted vault/auth/multi-user; custom SSRF not production-complete | P0 remaining before production |
+| Reliability | Duplicate suppression, failed-tool quarantine, timeouts, partial results | Managed retries/status/incidents | Reliability is a frequent complaint | Group tool-result bug fixed; more chaos/retry tests needed | P0 largely addressed |
+| Cost control | Step/call/time/token limits, per-bot daily budgets, run metrics | Usage allowances can be exhausted | Strong recurring concern | Daily run/token/tool guardrails added; no dollar-cost estimation/provider billing guarantee | P2 partly addressed |
+| Model generation | Text only via configured providers | Images/video/voice/multimodal | Useful creative features but plan-dependent | No image/video generation or image/file understanding | P2/inapplicable for now |
+| Team/enterprise | Single local user/workspace | Team bots/admin/SCIM/audit/network controls | Needed only for organizations | Deliberately out of local-first scope | Inapplicable for now |
+
+================================================================
+PHASE 4 — IMPLEMENTED IMPROVEMENTS IN THIS AUDIT
+================================================================
+
+P0/P1 reliability and workflow fixes:
+1. Fixed group model context so saved tool results are included in subsequent model turns. This was the root cause of repeated search loops.
+2. Delegation now waits for and returns actual specialist output to the coordinator instead of merely returning “accepted.”
+3. Added room-scoped approval retrieval and immediate group SSE notifications for approval requests/resolutions.
+4. Fixed duplicate-request handling to avoid falsely saying a healthy tool is unavailable and to preserve partial evidence.
+5. Added bounded/deadline-safe run behavior, duplicate-call suppression, failed-tool quarantine, and history compaction.
+6. Added global History & search with run metrics, conversation matches, result navigation, and history export.
+7. Fixed history SQL parameter binding and added group-search endpoint.
+8. Added file preview/download/delete actions and group conversation export.
+9. Added voice readiness/state fixes, real AWS transcription lifecycle completion, idle/session bounds, and clean end-of-utterance handling.
+10. Added bounded real project-file support and four reusable skills.
+
+November 20, 2026 continuation — high-value feature closure:
+1. Added bot/room attachment registration and bounded context for text, Markdown, JSON, CSV, XML, source files, and PDFs with extractable text. Upload/drop UI is visible. A browser-created Markdown `qa-browser-drop.md` was dropped onto the real attachment handler, produced a visible chip, then was deleted through the QA API. This verifies the browser drop handler and persistence, not the native OS file picker. Desktop browser tooling did not expose the file input for an actual local-file upload; that remains a verification limitation. PDF.js page-text extraction and page metadata are implemented/tested; scanned PDFs/OCR and images remain explicitly uninterpreted.
+2. Added per-bot daily run/token/executed-tool budgets. Runs are reserved once, not twice on approval resume; proposed but denied/unexecuted tools do not consume tool allowance. Settings edit saved maxRunsPerDay=75 for Scout, API confirmed it, then restored to 50. Automated checks verified exhausted runs block a new model call and actual token/tool accounting.
+3. Added authenticated webhook routines with SHA-256 hashed keys, exact event-ID and recent identical-payload idempotency, busy-owner rejection, and durable trigger reconciliation. Browser-created paused routine and one-time key dialog worked; the key accepted a real event, duplicate returned HTTP 409, and routine was paused again.
+4. Added unified direct/group history search. Browser search returned the actual webhook routine message; `/api/search?q=Welcome%20to%20the%20team%20room` returned the real shared-room message. The UI's shared-result click path uses groupId to open the room.
+5. Added bounded read-only `fetch_webpage`, preserving URL structure and validating public targets. Live Wikipedia retrieval returned HTTP 200 and 3,996 characters with `truncated: false`; HTML extraction tests cover boilerplate removal and truncation. No JavaScript execution, X connector, paywall bypass, or universal full-article guarantee.
+6. Fixed UI loading-state timing and ambiguous modal/file-control labels. One-time webhook credentials now appear in a selectable dialog with explicit copy action instead of silently depending on clipboard permission.
+7. Added bounded local lexical memory retrieval: meaningful term coverage and phrase boosts select older relevant facts while pinned rules/preferences remain present. This is not neural embedding/vector search. Focused tests verify an older matching fact and bounded pinned context.
+8. Added durable webhook queueing with busy-owner deferral, bounded retry, and completion reconciliation. A held mock-provider test confirmed no second run starts while busy, the event persists and dispatches after release, and its execution history completes. Added daily local-time scheduling with real timezone offsets and an execution-history UI. Missed runs remain skipped; no cloud scheduler or external notification service is claimed.
+9. Fixed interval scheduling camelCase/snake_case compatibility discovered by the full regression suite, and separated routine dispatch/reconciliation to avoid circular lifecycle imports.
+10. Added WhatsApp-inspired direct-chat interaction features: quoted replies with jump-to-original, reaction toggles, copy/edit/delete actions, in-chat search with result navigation/highlighting, per-bot session drafts, and jump-to-latest. Backend reply/reaction/edit/delete metadata is durable. Browser evidence confirms real search matches, reply preview, persisted 👍 reaction, and draft restoration after reload. Delivery receipts, actual online presence, forwarding, unread counts, and multi-device sync are not fabricated.
+11. Added real progressive model streaming for Chat Completions SSE and Bedrock ConverseStream, with persisted deltas and direct client updates. Automatic scrolling now follows only users already near the latest message; older-message reading/search navigation is preserved. Additional instructions during active chat are bounded queued work and begin after the current run. Non-streaming JSON provider responses retain a compatibility fallback. Integration tests cover actual deltas, queued instructions, and the fallback; live Bedrock output completed successfully.
+
+Automated regression evidence:
+- 28 tests passing after implementation, including busy-webhook queue persistence, dispatch after the owner becomes idle, execution-history reconciliation, interval scheduling compatibility, daily timezone conversion, attachment/PDF/budget/webhook/unified-history, webpage extraction, PDF parser, and local memory-ranking tests. Process-based tests now wait for child-process exit and retry locked-file cleanup on Windows. `npm audit` reports 0 vulnerabilities.
+- Production TypeScript/Vite build passes. Bundle-size warning only; no compile error.
+- Browser evidence: history search returns 3 matches for Errand Buddy; file preview/download works; new group room creation works; specialist handoff + in-room approval + actual saved file + coordinator summary all work; voice reaches Listening with no console error.
+
+================================================================
+PHASE 5 — REMAINING GAPS, LIMITATIONS AND NEXT PRIORITIES
+================================================================
+
+P0 BEFORE PRODUCTION:
+- No authentication, encrypted secret vault, multi-user isolation, or production-grade SSRF sandbox. Keep Relay on localhost.
+- Model/provider/API credentials and tool data are sensitive; current custom secret storage is unencrypted SQLite.
+- No guarantee of production-ready generated apps or secure financial integrations. The BudgetBuddy plan is a plan, not a completed application.
+
+P1 HIGH-VALUE REMAINING:
+- X search and connector framework for Gmail/Calendar/Slack/Drive/CRM. Public HTML extraction is implemented but not a full browser or universal full-article service.
+- External notification delivery and richer cron schedules. Webhook queueing, one retry, local-time daily schedules, and execution history are implemented; scheduling remains online-only and missed runs are skipped.
+- PDF/office/media analysis beyond extractable PDF text, OCR, image understanding, richer artifact types and editing. Text attachments and PDF text extraction are implemented, images/scanned PDFs are uninterpreted.
+- Safe extensible project execution: dependency installation, tests/builds for generated apps, and native Android packaging/device tests.
+- Semantic memory retrieval/editing and clearer voice transcript/playback controls.
+- More reliable group orchestration: queued runs, per-room cancellation, retries, parallel specialist synthesis, and better fallback when specialist is unavailable.
+- General MCP transport and OAuth connector setup instead of manual secret headers only.
+
+P2 / OPTIONAL:
+- Image/video generation, image understanding, richer multimodal output, custom pages/dashboards, semantic search, voice selection, memory import/export UI.
+- Model-quality/provider evaluation and per-bot provider fallback.
+
+INAPPLICABLE OR DELIBERATELY OUT OF SCOPE FOR CURRENT LOCAL VERSION:
+- Hosted cloud computer/browser/desktop control, encrypted production vault, enterprise administration, official app marketplace, public deployment, guaranteed Play Store approval/user recognition, and always-on execution while Relay is stopped.
+
+TEST NOTES AND EVIDENCE FILES
+----------------------------
+- Browser history screen: captured successfully (`screenshot.jpeg` file id file_9c19fa8f-62a2-49fb-b354-5803168b2503).
+- Browser group handoff screen: captured successfully (`screenshot.jpeg` file id file_c778f3dc-1b32-4bb6-bd18-963f63507bb2).
+- Earlier Files screenshot was captured successfully; a subsequent Files screenshot attempt required a visible desktop review window, so only that later attempt was not completed.
+- Actual AWS audio test is reproducible via `scripts/verify-voice-audio.ps1` and `scripts/verify-voice-audio.ts`.
+- Existing `docs/aws-validation.json` contains earlier Bedrock validation results.
+- November 20 browser evidence: screenshot `file_e1321256-0950-482b-a99e-77cc36ed8759` captured unified history search results. A later attachment screenshot could not be captured because the review window was not visible. The attachment drop handler did succeed and its chip/notification were read from the real page; native file-picker upload was not verified.
+- November 20 browser QA: routine `routine_d38dd622e98040d2` on isolated port 8788 accepted event `browser-qa-1`, returned run `run_42bf80add18b45af`, duplicate HTTP 409, then was paused. QA attachment and temporary budget change were removed/restored. No raw webhook key is stored in this inventory.
+- All research URLs above were selected from official docs or public community pages. Individual user claims are labeled accordingly; no private/paywalled content was invented.
+
+November 24, 2026 — chat UX parity increment:
+1. Added right-aligned user message bubbles and left-aligned bot reply layout across both direct chat and group rooms, matching the WhatsApp directional pattern while keeping Relay's warm ivory / terracotta palette.
+2. Added chronological day-separator labels (e.g. "Thursday, November 19", "Today") between messages from different calendar days. VERIFIED-BROWSER: 3 separators in direct chat (Thu Nov 19, Fri Nov 20, Today); 1 in group room (Fri Nov 20). Day labels use the user's locale via Intl.DateTimeFormat with "Yesterday"/"Today" shorthands.
+3. Added per-chat unread message counter in the jump-to-latest button ("N new messages") that tracks messages added while the user is reading older content and clears on scroll-to-bottom. `useChatNavigation` hook replaces the ad-hoc scroll refs in both ChatView and GroupView, eliminating the group-room scroll-reset-on-status-change bug.
+4. Added message action bars in group rooms (28 bars verified in browser DOM), matching the existing direct-chat feature. ConversationMessage.tsx is a shared component used by both chat surfaces.
+5. Added per-message search to group rooms with the same in-room search bar, result navigation, and jump-to-result behavior already verified in direct chat. VERIFIED-BROWSER: `[aria-label="Search this room"]` present.
+6. Added group-room message reactions, edits, and deletes to the backend API and GroupView. VERIFIED-API: 👍 reaction stored; `replyTo`, `editedAt`, `deletedAt` all correct.
+7. Added quoted group replies with `replyTo` persisted in `group_messages`. VERIFIED-API: `replyTo` matches parent message ID.
+8. Added per-room session drafts to group rooms (same sessionStorage pattern as direct chat).
+9. Added up to four pinned messages per direct-chat conversation. VERIFIED-API: `pinnedAt` timestamp written; unpin sets it to null; the pinned-message banner scrolls to the pinned message and cycles through multiple pins.
+10. Added bounded attachment text preview modal: clicking an attachment chip opens a scrollable pre-rendered text view (up to 50,000 chars) with an honest "Download text" link that returns extracted content only. Images show an explicit "Registered image, not interpreted" note. VERIFIED-API: download returns actual text; wrong-owner attachment returns HTTP 404.
+11. Added group-room message action API routes: PATCH/DELETE/reaction on `/api/groups/:id/messages/:messageId`. Previously only the direct-chat equivalents existed.
+12. Added attachment text download routes: `/api/bots/:id/attachments/:id/download` and `/api/groups/:id/attachments/:id/download` return extracted text with Content-Disposition headers.
+13. Added queue-follow-up hint text and updated composer placeholder to "Queue a follow-up…" while a run is active, so users know the input is not disabled.
+14. Fixed reply-to wiring in App.tsx (`onSend={(message, replyTo) => void send(message, replyTo)}`); previously the replyTo argument was dropped before reaching the API.
+15. Added `source-tag` and `edited-label` badges visible next to message timestamps; Escape key closes the reply/edit preview.
+
+Automated regression evidence (November 24):
+- 32 tests pass, including new integration test "group actions, quoted room replies, pins and honest attachment text downloads are durable" covering group reactions, quoted replies, edits, deletes, direct-chat pin/unpin, attachment text download, and 404 on wrong owner.
+- Production TypeScript/Vite build passes; npm audit reports 0 vulnerabilities.
+- DOM evaluation confirmed: 3 day separators, 11 message action bars, 5 user bubbles, search button present in direct chat; 28 message action bars, 1 day separator, group search and group composer textarea in group room.
+- API verification: direct-chat pin returns `pinnedAt`; attachment text download matches uploaded content; 404 on wrong-owner attachment; group reactions, edits, deletes, quoted replies all correct.
+- Chat parity score updated from 61/100 (39-point gap) to 89/100 (11-point gap); see docs/CHAT_PARITY.md for per-area evidence.
+
+CONCLUSION
+----------
+Relay is a functional local-first specialist workspace, not a full Grok Bot clone. The initial audit fixed tool evidence, loop recovery, room approvals, history/artifact portability, and voice/handoff state. The November 20 continuation added and verified unified direct/group search, bounded text/PDF attachments, per-bot daily budgets, authenticated/idempotent webhook routines, public HTML extraction, and local lexical memory recall. The November 24 chat-UX increment brings conversational parity from 61% to 89% — right-aligned user bubbles, chronological day separators, per-chat unread tracking, full action bars in group rooms, search in group rooms, quoted group replies, group edits/deletes/reactions, pinned direct-chat messages, attachment preview modals with honest text downloads, and queue-follow-up hints. All 32 automated tests, the production build, and npm audit pass. Remaining gaps (11 points): optimistic user bubbles, sidebar unread badges, spreadsheet/DOCX extraction, group pinning, group search result highlighting, and native image preview. OAuth/MCP connectors, neural semantic memory, OCR/image/office/media analysis, richer project deployment, native Android, and production security remain fully open.

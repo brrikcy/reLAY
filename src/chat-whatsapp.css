@@ -1,0 +1,183 @@
+/* ══════════════════════════════════════════════════════
+   CONVERSATIONAL CHAT STYLE  –  relay.
+   WhatsApp-inspired: timestamps inside bubbles, message
+   grouping, bubble tails, cleaner visual language.
+   ══════════════════════════════════════════════════════ */
+
+/* ── 1. Remove old .message-meta row (name + time above bubble) ─ */
+.message-meta { display: none !important; }
+
+/* ── 2. Avatar spacer for grouped messages ──────────── */
+.avatar-spacer {
+  width: 34px;
+  min-width: 34px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ── 3. Grouped message: tight spacing ──────────────── */
+.message-row.grouped-row {
+  margin-bottom: 2px !important;
+}
+.message-row:not(.grouped-row) {
+  margin-top: 10px;
+}
+
+/* ── 4. Bubble reset: shadow only, no border ─────────── */
+.message-bubble {
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(41,51,47,.10), 0 2px 8px rgba(41,51,47,.06) !important;
+  position: relative;
+  padding: 9px 13px 6px !important;
+  background: #eef3e8 !important;
+  color: #3a4835 !important;
+}
+.message-bubble.user-bubble {
+  box-shadow: 0 1px 2px rgba(140,70,30,.12), 0 2px 8px rgba(140,70,30,.08) !important;
+  background: linear-gradient(150deg, #fff4ec, #ffeadf) !important;
+  color: #4a3324 !important;
+}
+
+/* ── 5. Bubble radii for grouped vs first ───────────── */
+.assistant-message-row:not(.grouped-row) .message-bubble {
+  border-radius: 2px 16px 16px 16px !important;
+}
+.assistant-message-row.grouped-row .message-bubble {
+  border-radius: 10px 16px 16px 10px !important;
+}
+.user-message-row:not(.grouped-row) .user-bubble {
+  border-radius: 16px 2px 16px 16px !important;
+}
+.user-message-row.grouped-row .user-bubble {
+  border-radius: 16px 10px 10px 16px !important;
+}
+
+/* ── 6. Bubble tail — CSS triangle on first messages ─── */
+.assistant-message-row:not(.grouped-row) .message-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -7px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid #eef3e8;
+  border-left: 8px solid transparent;
+}
+.user-message-row:not(.grouped-row) .user-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -7px;
+  left: auto;
+  width: 0;
+  height: 0;
+  border-top: 8px solid #fff4ec;
+  border-right: 8px solid transparent;
+}
+
+/* ── 7. Sender name inside bubble ───────────────────── */
+.bubble-sender {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--coral-dark);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Different color per bot would be ideal; use coral as default */
+
+/* ── 8. Timestamp inside bubble ─────────────────────── */
+.bubble-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 4px;
+  margin-bottom: -1px;
+  padding-left: 24px; /* push time fully to right on short messages */
+}
+.bubble-time {
+  font-size: 11px !important;
+  opacity: 0.6;
+  white-space: nowrap;
+  color: inherit;
+  line-height: 1;
+}
+.user-bubble .bubble-time { opacity: 0.65; }
+.edited-label {
+  font-size: 10px !important;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* ── 9. Deleted messages ─────────────────────────────── */
+.deleted-text {
+  opacity: 0.55;
+  font-style: italic;
+  color: inherit;
+}
+
+/* ── 10. Reactions closer to bubble ─────────────────── */
+.message-reactions {
+  margin-top: 2px !important;
+  margin-left: 4px;
+}
+.user-message-row .message-reactions { margin-left: auto; margin-right: 4px; }
+
+/* ── 11. Reply quote inside bubble ──────────────────── */
+.reply-quote {
+  margin-bottom: 7px !important;
+  border-left: 3px solid rgba(0,0,0,.18) !important;
+  background: rgba(0,0,0,.04) !important;
+  border-radius: 4px !important;
+  padding: 5px 9px !important;
+}
+.user-bubble .reply-quote {
+  border-left-color: rgba(100,40,10,.25) !important;
+  background: rgba(100,40,10,.06) !important;
+}
+.reply-quote strong { font-size: 10.5px !important; }
+.reply-quote span { font-size: 11px !important; }
+
+/* ── 12. Conversation inner: less top padding ────────── */
+.conversation-inner { padding-top: 20px !important; }
+
+/* ── 13. Tool/handoff lines compact ─────────────────── */
+.tool-activity { margin: 4px 0 !important; }
+.tool-request-line {
+  margin: 4px 0 6px !important;
+  padding: 6px 12px !important;
+  font-size: 11px;
+  color: var(--muted-dark);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ── 14. Message highlighted: ring on bubble ─────────── */
+.message-highlighted .message-bubble {
+  box-shadow: 0 0 0 2px var(--coral), 0 2px 12px rgba(200,86,55,.2) !important;
+}
+
+/* ── 15. Pinned message: subtle accent ───────────────── */
+.message-pinned .message-bubble {
+  box-shadow: 0 0 0 2px #c9937888, 0 2px 8px rgba(140,70,30,.1) !important;
+}
+
+/* ── 16. Max width narrower for chat feel ───────────── */
+.message-row.assistant-message-row { max-width: 88% !important; }
+.message-row.user-message-row { max-width: 78% !important; }
+@media (max-width: 600px) {
+  .message-row.assistant-message-row { max-width: 93% !important; }
+  .message-row.user-message-row { max-width: 85% !important; }
+}
+
+/* ── 17. Bubble text should feel comfortable ─────────── */
+.message-bubble { font-size: 14px !important; line-height: 1.6 !important; }
+.message-bubble p { margin-bottom: 6px !important; }
+.message-bubble p:last-child { margin-bottom: 0 !important; }
+
+/* ── 18. Group transcript: same WhatsApp style ───────── */
+.group-transcript .avatar-spacer { width: 34px; min-width: 34px; }
+.group-transcript .bubble-sender { color: #5b7a3f; } /* green for group senders */

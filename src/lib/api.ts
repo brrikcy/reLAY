@@ -1,0 +1,68 @@
+import type { AllowRule, Approval, Attachment, Bot, ChatMessage, Group, GroupMessage, Memory, Skill, Provider, PublicTool, Routine, Run, RunEvent, UsageBudget } from './types.ts';
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
+  });
+  const data = await response.json().catch(() => ({})) as T & { error?: string };
+  if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status}).`);
+  return data;
+}
+
+export const api = {
+  workspace: () => request<{ bots: Bot[]; providers: Provider[]; tools: PublicTool[]; routines: Routine[]; groups: Group[]; skills: Skill[]; budgets: UsageBudget[]; approvalCount: number }>('/api/workspace'),
+  messages: (botId: string) => request<ChatMessage[]>(`/api/bots/${botId}/messages`),
+  memories: (botId: string) => request<Memory[]>(`/api/bots/${botId}/memories`),
+  runs: (botId: string) => request<Run[]>(`/api/bots/${botId}/runs`),
+  runEvents: (runId: string) => request<RunEvent[]>(`/api/runs/${runId}/events`),
+  approvals: (botId: string) => request<Approval[]>(`/api/bots/${botId}/approvals`),
+  send: (botId: string, message: string, replyTo?: string) => request<Run | { direct: true; response: string }>(`/api/bots/${botId}/messages`, { method: 'POST', body: JSON.stringify({ message, replyTo }) }),
+  editMessage: (botId: string, messageId: string, content: string) => request<{ ok: true }>(`/api/bots/${botId}/messages/${messageId}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
+  deleteMessage: (botId: string, messageId: string) => request<{ ok: true }>(`/api/bots/${botId}/messages/${messageId}`, { method: 'DELETE' }),
+  reactMessage: (botId: string, messageId: string, emoji: string) => request<{ ok: true }>(`/api/bots/${botId}/messages/${messageId}/reaction`, { method: 'POST', body: JSON.stringify({ emoji }) }),
+  replyMessage: (botId: string, messageId: string, replyTo?: string) => request<{ ok: true }>(`/api/bots/${botId}/messages/${messageId}/reply`, { method: 'POST', body: JSON.stringify({ replyTo }) }),
+  stop: (runId: string) => request<{ ok: true }>(`/api/runs/${runId}/stop`, { method: 'POST' }),
+  resolveApproval: (id: string, decision: 'approved' | 'denied') => request<{ ok: true }>(`/api/approvals/${id}`, { method: 'POST', body: JSON.stringify({ decision }) }),
+  createBot: (input: unknown) => request<Bot>('/api/bots', { method: 'POST', body: JSON.stringify(input) }),
+  updateBot: (id: string, input: unknown) => request<Bot>(`/api/bots/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteBot: (id: string) => request<{ ok: true }>(`/api/bots/${id}`, { method: 'DELETE' }),
+  saveProvider: (input: unknown, id?: string) => request<Provider>(id ? `/api/providers/${id}` : '/api/providers', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(input) }),
+  saveTool: (input: unknown, id?: string) => request<PublicTool>(id ? `/api/tools/${id}` : '/api/tools', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(input) }),
+  deleteTool: (id: string) => request<{ ok: true }>(`/api/tools/${id}`, { method: 'DELETE' }),
+  addMemory: (botId: string, input: unknown) => request<Memory>(`/api/bots/${botId}/memories`, { method: 'POST', body: JSON.stringify(input) }),
+  deleteMemory: (id: string) => request<{ ok: true }>(`/api/memories/${id}`, { method: 'DELETE' }),
+  saveRoutine: (botId: string, input: unknown, id?: string) => request<{ id?: string; ok?: boolean }>(id ? `/api/routines/${id}` : `/api/bots/${botId}/routines`, { method: id ? 'PATCH' : 'POST', body: JSON.stringify(input) }),
+  testRoutine: (id: string) => request<Run>(`/api/routines/${id}/test`, { method: 'POST' }),
+  routineExecutions: (id: string) => request<Array<{ id: string; routineId: string; triggerType: string; status: string; payload: unknown; eventId?: string; runId?: string; error?: string; startedAt: string; completedAt?: string; retryCount: number; nextAttemptAt: string }>>(`/api/routines/${id}/executions`),
+  deleteRoutine: (id: string) => request<{ ok: true }>(`/api/routines/${id}`, { method: 'DELETE' }),
+  groups: () => request<{ groups: Group[] }>('/api/workspace').then((workspace) => workspace.groups),
+  groupApprovals: (groupId: string) => request<Approval[]>(`/api/groups/${groupId}/approvals`),
+  groupMessages: (groupId: string) => request<GroupMessage[]>(`/api/groups/${groupId}/messages`),
+  createGroup: (input: unknown) => request<Group>('/api/groups', { method: 'POST', body: JSON.stringify(input) }),
+  sendGroup: (groupId: string, message: string, botIds: string[], inputMode: 'text' | 'voice', replyTo?: string) => request<{ runIds: string[] }>(`/api/groups/${groupId}/messages`, { method: 'POST', body: JSON.stringify({ message, botIds, inputMode, replyTo }) }),
+  editGroupMessage: (groupId: string, messageId: string, content: string) => request<{ ok: true }>(`/api/groups/${groupId}/messages/${messageId}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
+  deleteGroupMessage: (groupId: string, messageId: string) => request<{ ok: true }>(`/api/groups/${groupId}/messages/${messageId}`, { method: 'DELETE' }),
+  reactGroupMessage: (groupId: string, messageId: string, emoji: string) => request<{ ok: true }>(`/api/groups/${groupId}/messages/${messageId}/reaction`, { method: 'POST', body: JSON.stringify({ emoji }) }),
+  pinMessage: (botId: string, messageId: string, pinned: boolean) => request<{ ok: true }>(`/api/bots/${botId}/messages/${messageId}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }),
+  deleteGroup: (groupId: string) => request<{ ok: true }>(`/api/groups/${groupId}`, { method: 'DELETE' }),
+  search: (query: string) => request<unknown[]>(`/api/search?q=${encodeURIComponent(query)}`),
+  budget: (botId: string) => request<UsageBudget>(`/api/bots/${botId}/budget`),
+  saveBudget: (botId: string, input: unknown) => request<UsageBudget>(`/api/bots/${botId}/budget`, { method: 'PATCH', body: JSON.stringify(input) }),
+  attachments: (botId: string) => request<Attachment[]>(`/api/bots/${botId}/attachments`),
+  uploadAttachment: (botId: string, input: unknown) => request<Attachment>(`/api/bots/${botId}/attachments`, { method: 'POST', body: JSON.stringify(input) }),
+  groupAttachments: (groupId: string) => request<Attachment[]>(`/api/groups/${groupId}/attachments`),
+  uploadGroupAttachment: (groupId: string, input: unknown) => request<Attachment>(`/api/groups/${groupId}/attachments`, { method: 'POST', body: JSON.stringify(input) }),
+  groupSearch: (query: string) => request<unknown[]>(`/api/group-search?q=${encodeURIComponent(query)}`),
+  deleteAttachment: (botId: string, attachmentId: string) => request<{ ok: true }>(`/api/bots/${botId}/attachments/${attachmentId}`, { method: 'DELETE' }),
+  deleteGroupAttachment: (groupId: string, attachmentId: string) => request<{ ok: true }>(`/api/groups/${groupId}/attachments/${attachmentId}`, { method: 'DELETE' }),
+  createWebhookKey: (routineId: string) => request<{ key: string; url: string }>(`/api/routines/${routineId}/webhook-key`, { method: 'POST' }),
+  toolHealth: (toolId: string) => request<{ ok: boolean; name: string; status: number; checkedAt: string; sample: unknown }>(`/api/tools/${toolId}/health`),
+  allowRules: (botId: string) => request<AllowRule[]>(`/api/bots/${botId}/allow-rules`),
+  createAllowRule: (botId: string, toolName: string) => request<{ ok: true }>(`/api/bots/${botId}/allow-rules`, { method: 'POST', body: JSON.stringify({ toolName }) }),
+  deleteAllowRule: (id: string) => request<{ ok: true }>(`/api/allow-rules/${id}`, { method: 'DELETE' }),
+  skills: () => request<Skill[]>('/api/skills'),
+  saveSkill: (input: { botId?: string; name: string; description: string; instructions: string; shared: boolean }) => request<Skill>('/api/skills', { method: 'POST', body: JSON.stringify(input) }),
+  updateSkill: (id: string, input: Partial<{ name: string; description: string; instructions: string }>) => request<{ ok: true }>(`/api/skills/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteSkill: (id: string) => request<{ ok: true }>(`/api/skills/${id}`, { method: 'DELETE' }),
+};

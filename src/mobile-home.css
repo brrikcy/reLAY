@@ -1,0 +1,158 @@
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE HOME NAVIGATION  –  WhatsApp-style bot list
+   ═══════════════════════════════════════════════════════ */
+
+/* Desktop / tablet: hide mobile-only elements */
+.mobile-home-actions,
+.mobile-only-footer,
+.mobile-back-btn { display: none; }
+.desktop-only-footer,
+.desktop-only-heading,
+.desktop-only-nav,
+.desktop-only-note { display: flex; }
+.desktop-only-heading,
+.desktop-only-nav { display: flex; flex-direction: column; }
+.desktop-only-heading { display: flex !important; flex-direction: row !important; }
+.desktop-only-note { display: flex !important; }
+
+@media (max-width: 800px) {
+
+  /* mobile-home: sidebar IS the full screen */
+  .app-shell.mobile-home .sidebar {
+    position: static !important;
+    transform: none !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    display: flex;
+    box-shadow: none !important;
+  }
+  .app-shell.mobile-home .mobile-overlay { display: none !important; }
+  .app-shell.mobile-home .main-content { display: none !important; }
+  .app-shell.mobile-home .inspector { display: none !important; }
+  .app-shell.mobile-home .mobile-close { display: none !important; }
+
+  /* mobile-main: chat/group takes full screen */
+  .app-shell.mobile-main .sidebar { display: none !important; }
+  .app-shell.mobile-main .main-content { display: flex !important; width: 100vw !important; }
+  .app-shell.mobile-main .mobile-topbar { display: none !important; }
+
+  /* 3-dots menu button */
+  .mobile-home-actions { display: flex; align-items: center; margin-left: auto; position: relative; }
+
+  .mobile-quick-menu {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 200;
+    background: #fffefa; border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(41,51,47,.18); padding: 6px 0; min-width: 195px;
+  }
+  .mobile-quick-menu button {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 12px 16px; font-size: 13.5px; color: var(--ink);
+    text-align: left; border: 0; background: none; cursor: pointer;
+  }
+  .mobile-quick-menu button:hover { background: #f0f4ea; }
+  .mobile-quick-menu button svg { color: var(--muted-dark); }
+  .mobile-quick-menu-divider { height: 1px; background: var(--line); margin: 4px 0; }
+  .mobile-menu-backdrop { position: fixed; inset: 0; z-index: 199; background: transparent; }
+
+  /* Back arrow in chat/group header */
+  .mobile-back-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    color: var(--coral); border: 0; background: none; cursor: pointer; margin-right: 2px;
+  }
+  .mobile-back-btn:hover { background: rgba(200,86,55,.08); }
+  .mobile-avatar-button { display: none !important; }
+
+  /* Hide desktop nav sections on mobile home */
+  .desktop-only-heading,
+  .desktop-only-nav,
+  .desktop-only-note,
+  .desktop-only-footer { display: none !important; }
+
+  /* Mobile footer row */
+  .mobile-only-footer {
+    display: flex !important; gap: 0; border-top: 1px solid var(--line); padding: 2px 0;
+  }
+  .mobile-only-footer button {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 3px; padding: 10px 8px; font-size: 10px; color: var(--muted-dark);
+    border: 0; background: none; cursor: pointer;
+  }
+  .mobile-only-footer button:hover { color: var(--ink); background: #f0f4ea; }
+
+  /* Brand row on mobile home */
+  .app-shell.mobile-home .brand-row { height: 56px !important; padding: 0 16px !important; }
+  .app-shell.mobile-home .workspace-badge { display: none; }
+  .app-shell.mobile-home .brand span { font-size: 20px; }
+
+  /* Bot list: WhatsApp-style rows */
+  .app-shell.mobile-home .bot-list { margin: 0 !important; }
+  .app-shell.mobile-home .bot-list-item {
+    min-height: 64px !important; padding: 10px 16px !important;
+    border-radius: 0 !important; margin: 0 !important;
+    border-bottom: 1px solid #f0f2ec !important;
+  }
+  .app-shell.mobile-home .bot-list-item.selected {
+    background: #fff8f4 !important; border-left: 3px solid var(--coral) !important;
+    box-shadow: none !important;
+  }
+  .app-shell.mobile-home .bot-list-copy strong { font-size: 14px !important; }
+  .app-shell.mobile-home .bot-list-copy span { font-size: 12px !important; }
+
+  /* Sidebar scroll: no padding */
+  .app-shell.mobile-home .sidebar-scroll { padding: 0 !important; }
+
+  /* Section headings */
+  .app-shell.mobile-home .sidebar-section-heading {
+    padding: 10px 16px 4px !important; font-size: 11px !important;
+    letter-spacing: 0.5px !important; color: var(--muted) !important;
+  }
+
+  /* Search pill */
+  .app-shell.mobile-home .sidebar-search {
+    margin: 6px 12px 8px !important; border-radius: 20px !important;
+    padding: 9px 14px !important; background: #e8ece3 !important;
+    border: none !important;
+  }
+  .app-shell.mobile-home .sidebar-search input { font-size: 14px !important; }
+  .app-shell.mobile-home .sidebar-search kbd { display: none; }
+
+  /* New bot button */
+  .app-shell.mobile-home .new-bot-button {
+    margin: 8px 14px !important; border: 1.5px dashed var(--line) !important;
+    border-radius: 10px !important; color: var(--muted-dark) !important;
+    font-size: 13px !important; padding: 10px 14px !important;
+  }
+
+  /* Team rooms card */
+  .app-shell.mobile-home .group-nav-card {
+    margin: 4px 14px 10px !important; border-radius: 10px !important;
+    padding: 12px 14px !important; font-size: 13px !important;
+  }
+
+  /* Sidebar divider */
+  .app-shell.mobile-home .sidebar-divider { display: none !important; }
+}
+
+/* -- Groups in sidebar ----------------------------------- */
+.group-list-item .bot-list-copy span { display: flex; align-items: center; gap: 2px; }
+.new-group-button { color: #4a7c59 !important; }
+.new-group-button:hover { background: #edf3e7 !important; }
+
+/* Mobile home: group items same style as bot items */
+.app-shell.mobile-home .group-list-item {
+  min-height: 64px !important;
+  padding: 10px 16px !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #f0f2ec !important;
+}
+.app-shell.mobile-home .group-list-item.selected {
+  background: #f0f7f0 !important;
+  border-left: 3px solid #4a7c59 !important;
+  box-shadow: none !important;
+}
+
+/* Group avatar in sidebar list */
+.group-avatar { flex-shrink: 0; }

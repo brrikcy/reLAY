@@ -1,0 +1,15 @@
+import { useState } from 'react';
+import { Check, Users } from 'lucide-react';
+import { Modal } from './Modal.tsx';
+import { BotAvatar } from './BotAvatar.tsx';
+import { api } from '../lib/api.ts';
+import type { Bot, Group } from '../lib/types.ts';
+
+export function GroupModal({ bots, onClose, onSaved, onError }: { bots: Bot[]; onClose: () => void; onSaved: (group: Group) => void; onError: (message: string) => void }) {
+  const [name, setName] = useState('Project team');
+  const [botIds, setBotIds] = useState(bots.map((bot) => bot.id));
+  const [coordinatorId, setCoordinatorId] = useState(bots[0]?.id ?? '');
+  const [saving, setSaving] = useState(false);
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); setSaving(true); try { onSaved(await api.createGroup({ name, botIds, coordinatorId })); } catch (error) { onError(error instanceof Error ? error.message : 'Could not create this room.'); setSaving(false); } };
+  return <Modal title="Bring the specialists together." eyebrow="NEW SHARED ROOM" description="Choose 2–6 bots. Each keeps its own memory, tools, and approval boundaries." onClose={onClose}><form className="modal-form" onSubmit={submit}><label className="field"><span>Room name</span><input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} /></label><fieldset className="field"><legend>Specialists</legend><div className="tool-picker">{bots.map((bot) => <label className={`tool-pick ${botIds.includes(bot.id) ? 'selected' : ''}`} key={bot.id}><input type="checkbox" checked={botIds.includes(bot.id)} onChange={() => setBotIds((current) => current.includes(bot.id) ? current.filter((id) => id !== bot.id) : [...current, bot.id])} /><BotAvatar name={bot.name} color={bot.color} size="small" /><span><strong>{bot.name}</strong><small>{bot.role}</small></span><span className="check-box">{botIds.includes(bot.id) && <Check size={13} />}</span></label>)}</div></fieldset><label className="field"><span>Default coordinator</span><select value={coordinatorId} onChange={(event) => setCoordinatorId(event.target.value)}>{bots.filter((bot) => botIds.includes(bot.id)).map((bot) => <option value={bot.id} key={bot.id}>{bot.name} · {bot.role}</option>)}</select><small>Receives messages without @mentions. You can select different recipients in the room.</small></label><div className="security-note"><Users size={17} /><div><strong>Shared context, not shared credentials.</strong><p>Members see the room transcript. Individual memories remain separate, and each bot uses only its assigned tools. Voice replies are optional.</p></div></div><footer className="modal-footer"><span /><div className="modal-footer-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={saving || botIds.length < 2 || botIds.length > 6 || !coordinatorId || !name.trim()}>{saving ? 'Creating…' : 'Create room'}</button></div></footer></form></Modal>;
+}

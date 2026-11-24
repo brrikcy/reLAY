@@ -1,0 +1,347 @@
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE OPTIMIZATION  –  relay.
+   Safe areas · Touch targets · iOS zoom fix · Keyboard
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 1. iOS safe areas (notch + home indicator) ────── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .composer-area {
+    padding-bottom: max(17px, calc(12px + env(safe-area-inset-bottom)));
+  }
+  .group-composer-area {
+    padding-bottom: max(15px, calc(10px + env(safe-area-inset-bottom)));
+  }
+  .sidebar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sidebar-footer {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .mobile-topbar {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ── 2. iOS input zoom prevention (< 16px zooms) ────── */
+/* Use CSS zoom on the wrapper instead of font-size on input */
+@media (max-width: 768px) {
+  /* Prevent iOS auto-zoom by keeping font-size >= 16px on inputs */
+  .composer textarea,
+  .group-composer textarea,
+  .chat-search input,
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  .field > input,
+  .field > textarea {
+    font-size: max(16px, 1em) !important;
+  }
+  /* But keep displayed text readable via transform */
+  .composer textarea { transform-origin: top left; }
+}
+
+/* ── 3. Touch targets: 44px Apple HIG minimum ───────── */
+@media (max-width: 1050px) {
+  /* Every tappable element that's too small gets a larger hit area */
+  .icon-button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  .small-icon-button {
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+  .send-button {
+    width: 42px !important;
+    height: 42px !important;
+  }
+  .stop-button {
+    min-height: 40px !important;
+  }
+  .bot-list-item {
+    min-height: 56px !important;
+    padding: 10px !important;
+  }
+  .workspace-nav button,
+  .sidebar-footer > button {
+    min-height: 44px !important;
+  }
+  .new-bot-button {
+    min-height: 44px !important;
+  }
+  .message-actions .small-icon-button {
+    min-width: 32px !important;
+    min-height: 32px !important;
+  }
+  .toggle {
+    width: 44px !important;
+    height: 26px !important;
+  }
+  .toggle span {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  /* Approval action buttons */
+  .approval-actions button {
+    min-height: 44px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ── 4. App shell: remove hard min-height ────────────── */
+@media (max-width: 800px) {
+  .app-shell {
+    min-height: 100dvh !important;
+  }
+}
+
+/* ── 5. Inspector: hide by default on mobile ─────────── */
+/* Inspector is controlled by React state, but add extra safety */
+@media (max-width: 800px) {
+  .inspector {
+    /* When shown, it overlays the conversation — make it properly dismissible */
+    top: 0 !important;
+    height: 100dvh !important;
+    transition: transform 0.25s ease !important;
+  }
+}
+
+/* ── 6. Mobile topbar improvements ──────────────────── */
+@media (max-width: 800px) {
+  .mobile-topbar {
+    height: 50px !important;
+    padding: 0 16px !important;
+    background: rgba(255,254,250,0.97) !important;
+    border-bottom: 1px solid var(--line) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  .mobile-topbar span {
+    font-family: var(--heading);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    letter-spacing: -0.04em;
+  }
+  .mobile-topbar .icon-button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+/* ── 7. Sidebar drawer: smooth open/close ────────────── */
+@media (max-width: 800px) {
+  .sidebar {
+    transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    box-shadow: none;
+    will-change: transform;
+  }
+  .sidebar-open {
+    box-shadow: 4px 0 32px rgba(41, 51, 47, 0.18) !important;
+  }
+  .mobile-overlay {
+    background: rgba(41, 51, 47, 0.35) !important;
+    backdrop-filter: blur(2px) !important;
+    -webkit-backdrop-filter: blur(2px) !important;
+    transition: opacity 0.2s ease !important;
+  }
+}
+
+/* ── 8. Conversation: full height behind keyboard ────── */
+@media (max-width: 800px) {
+  .chat-view {
+    /* Use dvh for dynamic viewport height (shrinks with keyboard) */
+    height: 100dvh !important;
+  }
+  .conversation {
+    /* Ensure scroll container shrinks when keyboard opens */
+    overscroll-behavior-y: contain !important;
+  }
+  .composer-area {
+    /* Stick to bottom, above keyboard */
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 10 !important;
+    background: rgba(255,254,250,0.98) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+  }
+}
+
+/* ── 9. Chat header on mobile: compact + clean ───────── */
+@media (max-width: 800px) {
+  .chat-header {
+    height: 54px !important;
+    padding: 0 14px !important;
+  }
+  .chat-header .persistent-badge { display: none !important; }
+  .bot-name-button { font-size: 15px !important; }
+  .bot-presence { font-size: 10px !important; gap: 4px; }
+}
+
+/* ── 10. Composer on mobile: comfortable typing ──────── */
+@media (max-width: 800px) {
+  .composer {
+    border-radius: 20px !important;
+    padding: 10px 14px 9px !important;
+  }
+  .composer-bottom { margin-top: 6px !important; }
+  .composer-caption { display: none !important; } /* Hide on mobile, show on desktop */
+  .composer-hint { display: none !important; }
+  .budget-button { display: none !important; }
+  /* Show only the attachment icon and send button */
+  .attachment-panel .icon-button { min-width: 40px !important; }
+}
+
+/* ── 11. Messages: full-width bubbles on small screens ─ */
+@media (max-width: 480px) {
+  .message-row,
+  .message-row.user-message-row {
+    max-width: 92% !important;
+  }
+  .message-bubble {
+    font-size: 14px !important;
+    line-height: 1.65 !important;
+    padding: 10px 13px !important;
+  }
+  .conversation-inner {
+    padding: 16px 14px 0 !important;
+  }
+  .message-row {
+    margin-bottom: 14px !important;
+  }
+  /* Larger tap areas for reactions */
+  .message-reactions button {
+    padding: 5px 10px !important;
+    font-size: 15px !important;
+    min-height: 32px !important;
+  }
+  /* Reply quote bigger on mobile */
+  .reply-quote {
+    padding: 8px 12px !important;
+  }
+  .reply-quote span { font-size: 12px !important; }
+  .reply-quote strong { font-size: 11px !important; }
+}
+
+/* ── 12. Date separator: centered pill ───────────────── */
+@media (max-width: 800px) {
+  .date-separator {
+    margin: 18px 0 14px !important;
+  }
+}
+
+/* ── 13. Jump-to-latest: bottom-right corner ─────────── */
+@media (max-width: 800px) {
+  .jump-bottom {
+    bottom: 90px !important;
+    right: 16px !important;
+    padding: 9px 14px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* ── 14. Inspector overlay on mobile ─────────────────── */
+@media (max-width: 800px) {
+  .inspector {
+    width: min(340px, 90vw) !important;
+  }
+  .inspector-scroll {
+    padding: 16px 14px !important;
+  }
+  .inspector-tabs button {
+    font-size: 10px !important;
+  }
+}
+
+/* ── 15. Modals: full-screen on small phones ─────────── */
+@media (max-width: 480px) {
+  .modal-panel {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 50dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin-top: auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+  }
+  .modal-backdrop {
+    align-items: flex-end !important;
+  }
+  .modal-header {
+    padding: 20px 20px 14px !important;
+  }
+  .modal-actions {
+    padding: 14px 20px !important;
+    padding-bottom: max(14px, calc(14px + env(safe-area-inset-bottom))) !important;
+  }
+}
+
+/* ── 16. Group view: mobile layout ───────────────────── */
+@media (max-width: 800px) {
+  .group-view {
+    min-height: 100dvh !important;
+  }
+  .group-body {
+    min-height: 0 !important;
+  }
+  /* Voice panel hidden on mobile unless active */
+  .voice-panel:not(.voice-panel-active) {
+    display: none !important;
+  }
+  .group-roster {
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+  }
+  .group-roster::-webkit-scrollbar { display: none !important; }
+  .member-chip {
+    flex-shrink: 0 !important;
+    padding: 8px 10px !important;
+  }
+}
+
+/* ── 17. Navigation: active state more visible ───────── */
+@media (max-width: 800px) {
+  .bot-list-item.selected {
+    background: #fffefa !important;
+    border-left: 3px solid var(--coral) !important;
+    padding-left: 7px !important;
+  }
+}
+
+/* ── 18. Scroll behavior: native feel ────────────────── */
+@media (max-width: 800px) {
+  .conversation,
+  .group-transcript,
+  .inspector-scroll,
+  .sidebar-scroll,
+  .modal-body,
+  .attachment-preview-body {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+  }
+}
+
+/* ── 19. Tables and code blocks: scroll not overflow ─── */
+@media (max-width: 800px) {
+  .message-bubble pre,
+  .message-bubble table {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+  }
+  pre.tool-result {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    font-size: 10px !important;
+  }
+}
+
+/* ── 20. Focus states: visible even on mobile ─────────── */
+@media (max-width: 800px) {
+  :focus-visible {
+    outline: 2px solid rgba(200, 86, 55, 0.6) !important;
+    outline-offset: 2px !important;
+  }
+}

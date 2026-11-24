@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-19T17:03:17.920Z",
+  "durationMs": 25314,
+  "provider": "Amazon Bedrock Converse",
+  "model": "deepseek.v3.2",
+  "region": "us-east-1",
+  "profile": "bedrock",
+  "results": [
+    {
+      "name": "AWS SSO resolution in Relay runtime",
+      "status": "passed",
+      "durationMs": 1944,
+      "account": "853349839855",
+      "principal": "afsal@robo.my",
+      "credentialStorage": "AWS SDK SSO provider chain; no AWS key in Relay"
+    },
+    {
+      "name": "General chat and structured output",
+      "status": "passed",
+      "durationMs": 2882,
+      "output": "```json\n{\n  \"service\": \"Amazon Bedrock\",\n  \"status\": \"connected\"\n}\n```",
+      "usage": {
+        "inputTokens": 249,
+        "outputTokens": 23
+      }
+    },
+    {
+      "name": "Durable preference and subsequent model use",
+      "status": "passed",
+      "durationMs": 1883,
+      "memoryCount": 1,
+      "codenameRecalled": true,
+      "bulletCount": 2,
+      "output": "Your project codename is **Copper Falcon**.\n\nTwo short tips for a productive morning:\n- Start with a clear, prioritized to‑do list for the day.\n- Avoid checking email or messages for the first hour of focused work."
+    },
+    {
+      "name": "Real model tool call with human approval",
+      "status": "passed",
+      "durationMs": 5331,
+      "approvalArguments": {
+        "city": "Singapore"
+      },
+      "apiCalls": 1,
+      "modelCalls": 2,
+      "output": "With clear skies and a pleasant 18°C in Singapore, it's a perfect day for outdoor activities.",
+      "usage": {
+        "inputTokens": 1716,
+        "outputTokens": 68
+      }
+    },
+    {
+      "name": "Denied tool call produces no external action",
+      "status": "passed",
+      "durationMs": 4951,
+      "runStatus": "completed",
+      "toolCalls": 0,
+      "externalApiCallsUnchanged": true,
+      "note": "The model may explain the denial or reach its safety limit; neither permits the denied HTTP call."
+    },
+    {
+      "name": "Paused routine runs only when explicitly tested",
+      "status": "passed",
+      "durationMs": 5026,
+      "source": "routine",
+      "remainsPaused": true,
+      "output": "This scheduled test ran successfully."
+    },
+    {
+      "name": "Unsupported region fails visibly without a tool action",
+      "status": "passed",
+      "durationMs": 1848,
+      "expectedOutcome": "failed run, healthy server",
+      "runStatus": "failed",
+      "error": "Bedrock rejected the request: The provided model identifier is invalid.",
+      "processRemainedHealthy": true
+    }
+  ]
+}

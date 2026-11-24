@@ -1,0 +1,277 @@
+
+/* ══════════════════════════════════════════════════════
+   UI/UX OPTIMIZATION v2  –  relay.
+   Goals: more chat space, readable type, better feedback
+   ══════════════════════════════════════════════════════ */
+
+/* ── 0. CRITICAL: Sidebar overflow fix ───────────────── */
+/* The local-profile footer was bleeding 135px outside the sidebar.
+   Root cause: overflow:visible on sidebar + profile had min-width:auto */
+
+/* 1. The sidebar itself should clip horizontal overflow only
+      (vertical scrolling must still work in sidebar-scroll) */
+.sidebar{overflow-x:hidden!important}
+
+/* 2. Footer must be a column so Settings/Guide/Profile stack vertically */
+.sidebar-footer.desktop-only-footer{
+  display:flex!important;flex-direction:column!important;
+  overflow:hidden!important;padding:10px 12px!important;gap:2px
+}
+
+/* 3. Buttons: show icon + truncated text, don't overflow */
+.sidebar-footer.desktop-only-footer>button{
+  min-width:0!important;overflow:hidden!important;
+  white-space:nowrap!important;text-overflow:ellipsis!important;
+  display:flex!important;align-items:center!important;
+  gap:9px!important;padding:8px 10px!important;border-radius:7px
+}
+
+/* 4. Local-profile: contained in its column row */
+.local-profile{
+  min-width:0!important;overflow:hidden!important;
+  max-width:100%;display:flex;align-items:center;gap:8px;
+  padding:6px 10px!important;border-radius:7px
+}
+.local-profile>span:nth-child(2){min-width:0;overflow:hidden;flex:1}
+.local-profile strong,.local-profile small{
+  display:block;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;max-width:100%
+}
+
+/* 5. Sidebar-scroll must still scroll independently */
+.sidebar-scroll{overflow-y:auto!important;overflow-x:hidden!important}
+
+/* 6. Hide sidebar-note at constrained widths to free vertical space */
+@media(max-width:1250px){.sidebar-note{display:none!important}}
+
+/* 7. Remove brief opacity-0 flash from message entrance animation
+      so messages are immediately visible on load */
+.message-row{animation:none!important}
+.message-row:last-child,.message-row:nth-last-child(2),.message-row:nth-last-child(3){animation:none!important}
+
+/* ── 1. Layout: reclaim vertical chrome ─────────────── */
+.brand-row{height:60px!important;padding:0 15px}
+.chat-header{height:62px!important;min-height:62px;padding:0 18px}
+.bot-name-button{font-size:14px!important}
+.bot-presence{font-size:11px!important;gap:5px}
+.chat-header-actions{gap:4px}
+
+/* Compact bot intro */
+.bot-intro{padding:18px 0 8px!important;text-align:center}
+.bot-intro>div:first-child{width:48px!important;height:48px!important;font-size:17px!important}
+.bot-intro h1{font-size:16px!important;letter-spacing:-.04em;margin-bottom:4px}
+.bot-intro p{font-size:12px!important;line-height:1.6;max-width:400px;margin:0 auto}
+.intro-tags{margin-top:10px!important;gap:6px}
+.intro-tags span{font-size:10px!important;padding:3px 9px}
+
+/* ── 2. Sidebar: compact and scannable ───────────────── */
+.sidebar-section-heading{padding:9px 12px 3px!important;font-size:9.5px!important;letter-spacing:1px}
+.sidebar-search{padding:7px 14px!important}
+.bot-list-item{padding:7px 9px!important;min-height:48px}
+.bot-list-copy strong{font-size:13px!important;font-weight:600!important}
+.bot-list-copy>span{font-size:11px!important}
+.new-bot-button{padding:7px 14px!important;font-size:12px!important;margin:2px 8px!important}
+
+/* ── 3. Typography: nothing below 10px in chat ───────── */
+.message-meta{margin-bottom:5px!important;gap:7px}
+.message-meta strong{font-size:12px!important;font-weight:600!important}
+.message-meta time{font-size:11px!important;opacity:.75}
+.edited-label{font-size:10px!important;padding:1px 5px;border-radius:3px;background:#f0f1ec;color:#7a827a!important}
+.source-tag{font-size:9px!important}
+.date-separator{font-size:11px!important;margin:22px 0 16px!important}
+.date-separator span{font-size:11px!important;padding:4px 13px}
+.reply-quote strong{font-size:10.5px!important}
+.reply-quote span{font-size:11px!important;line-height:1.55}
+.message-reactions button{font-size:13px!important;padding:3px 8px}
+.message-reactions small{font-size:10px!important;font-weight:600}
+
+/* ── 4. Message bubbles: depth and warmth ────────────── */
+.message-bubble{
+  box-shadow:0 1px 2px rgba(41,51,47,.05),0 2px 8px rgba(41,51,47,.04)!important;
+  border-color:#e2e6dc!important;
+  line-height:1.72!important
+}
+.message-bubble.user-bubble{
+  background:linear-gradient(160deg,#fff4ec,#ffeee2)!important;
+  border-color:#e8c8b4!important;
+  box-shadow:0 1px 2px rgba(140,70,30,.07),0 2px 8px rgba(140,70,30,.05)!important;
+  color:#4a3324!important
+}
+.message-bubble.message-deleted{opacity:.55;border-style:dashed!important}
+
+/* Subtle new-message entrance */
+@keyframes msgIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.message-row{animation:msgIn .15s ease-out both}
+
+/* ── 5. Working indicator: typing dots ───────────────── */
+.working-indicator{
+  display:flex!important;align-items:center;gap:10px;
+  padding:14px 0;margin:2px 0
+}
+.working-orbit{
+  position:relative;
+  width:40px!important;height:24px!important;
+  background:#f1f4ec!important;
+  border:1px solid var(--line)!important;
+  border-radius:14px!important;
+  box-shadow:0 1px 4px rgba(41,51,47,.06)!important;
+  display:flex!important;align-items:center;justify-content:center;gap:5px;
+  animation:none!important;padding:0 8px
+}
+.working-orbit svg{display:none!important}
+.working-orbit>span{
+  width:5px;height:5px;border-radius:50%;
+  background:#9aaa8a;
+  display:inline-block;flex-shrink:0;
+  animation:typingBounce 1.3s ease-in-out infinite
+}
+.working-orbit>span:nth-child(1){animation-delay:.0s}
+.working-orbit>span:nth-child(2){animation-delay:.22s}
+.working-orbit>span:nth-child(3){animation-delay:.44s}
+@keyframes typingBounce{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1.15)}}
+.working-indicator>span:first-of-type{font-size:12px!important;color:#687a60;font-weight:450;letter-spacing:.01em}
+.working-indicator small{font-size:10px!important;color:#8a9a80!important}
+.working-tool-name{font-size:11px!important;color:#6a8858!important;font-style:italic;font-weight:400}
+
+/* ── 6. Inspector: equal tabs, cleaner ───────────────── */
+.inspector-tabs{
+  display:flex!important;padding:0 10px!important;
+  gap:1px;border-bottom:2px solid var(--line)
+}
+.inspector-tabs button{
+  flex:1!important;min-width:0;
+  padding:9px 3px!important;
+  font-size:10.5px!important;
+  gap:4px!important;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border-radius:0;
+  border-bottom:2px solid transparent;
+  margin-bottom:-2px;
+  transition:color .15s,border-color .15s
+}
+.inspector-tabs button.selected{
+  border-bottom-color:var(--coral)!important;
+  background:transparent!important;
+  color:var(--ink)!important;
+  font-weight:600!important
+}
+.inspector-tabs button:hover:not(.selected){background:rgba(50,70,45,.05)!important}
+.tab-count{
+  font-size:9px!important;min-width:16px;height:15px;
+  background:#e5ead9;color:#5a6b52;border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:0 4px;font-weight:700;line-height:1;flex-shrink:0
+}
+
+/* ── 7. Composer: spacious and focused ───────────────── */
+.composer{border-radius:14px!important;padding:11px 14px 10px!important}
+.composer:focus-within{
+  box-shadow:0 4px 20px rgba(169,64,40,.07),0 0 0 2px rgba(200,86,55,.1)!important;
+  border-color:#c4916c!important
+}
+.composer textarea{font-size:13.5px!important;line-height:1.62!important}
+.composer textarea::placeholder{color:#a0a89c!important}
+.composer-tools{gap:5px!important}
+.composer-hint{font-size:9.5px!important;white-space:nowrap}
+.budget-button span{font-size:9.5px!important}
+.followup-hint{font-size:11px!important;color:#8c8880!important;padding:0 2px 7px}
+.composer-caption{font-size:9.5px!important;gap:16px;margin-top:7px!important;padding:0 1px}
+.composer-caption>span{font-size:9.5px!important;gap:4px}
+
+/* ── 8. Jump-to-latest: visible and inviting ─────────── */
+.jump-bottom{
+  background:var(--coral)!important;color:#fff!important;
+  border:none!important;
+  box-shadow:0 4px 16px rgba(169,64,40,.35),0 2px 6px rgba(0,0,0,.1)!important;
+  border-radius:20px!important;padding:8px 14px!important;
+  font-size:11px!important;font-weight:500;gap:6px!important
+}
+.jump-bottom:hover{background:var(--coral-dark)!important;transform:translateY(-1px)}
+.jump-bottom{transition:background .15s,transform .12s}
+
+/* ── 9. Send button: round and prominent ─────────────── */
+.send-button{
+  width:34px!important;height:34px!important;
+  border-radius:50%!important;
+  box-shadow:0 2px 8px rgba(169,64,40,.22)!important;
+  transition:transform .12s,box-shadow .12s,background .12s
+}
+.send-button:not(:disabled):hover{transform:scale(1.06);box-shadow:0 3px 12px rgba(169,64,40,.32)!important}
+
+/* ── 10. Small icon buttons: easier to tap ───────────── */
+.small-icon-button{
+  width:26px!important;height:26px!important;
+  border-radius:7px!important;
+  transition:background .1s,color .1s
+}
+.small-icon-button:hover{background:rgba(50,70,45,.09)!important;color:var(--ink)!important}
+.message-actions{gap:2px!important}
+
+/* ── 11. Toast: cleaner and elevated ─────────────────── */
+.toast{
+  border-radius:12px!important;padding:11px 14px!important;
+  font-size:12px!important;gap:9px!important;
+  box-shadow:0 8px 32px rgba(41,51,47,.15)!important
+}
+
+/* ── 12. Approval cards ──────────────────────────────── */
+.approval-card{border-radius:12px!important}
+.approval-actions{gap:7px!important;padding-top:12px}
+.approval-actions button{height:34px!important;font-size:12px!important}
+
+/* ── 13. Memory cards ────────────────────────────────── */
+.memory-card{padding:12px!important;border-radius:10px!important}
+.memory-card p{font-size:12px!important;line-height:1.6}
+.memory-category{font-size:9px!important;border-radius:4px;padding:2px 7px!important}
+.memory-card footer{font-size:10px!important;margin-top:7px}
+.memory-tip{font-size:11px!important;border-radius:8px!important;padding:9px 12px!important}
+
+/* ── 14. Timeline: scan-friendly run log ─────────────── */
+.timeline-item{gap:9px!important;padding:8px 0!important}
+.timeline-item strong{font-size:11px!important}
+.timeline-item p{font-size:10.5px!important;line-height:1.5}
+.timeline-item time{font-size:9.5px!important}
+.run-metrics span{font-size:10.5px!important}
+.run-metrics strong{font-size:13px!important}
+.current-run-card strong{font-size:12px!important}
+
+/* ── 15. Status dots: animated and semantic ──────────── */
+.status-dot{transition:background .3s}
+.status-dot.status-idle{background:#9db08a!important}
+.status-dot.status-working{background:var(--coral)!important;animation:statusPulse 1.6s ease-in-out infinite}
+.status-dot.status-waiting{background:#c5a240!important;animation:statusPulse 2s ease-in-out infinite}
+.status-dot.status-error{background:#b94c44!important}
+@keyframes statusPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.8)}}
+
+/* ── 16. Focus rings ─────────────────────────────────── */
+button:focus-visible,a:focus-visible{
+  outline:2px solid rgba(200,86,55,.55)!important;
+  outline-offset:2px!important
+}
+
+/* ── 17. Scrollbars: visible enough to find ─────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#cdd1c8;border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:#b5bab0}
+
+/* ── 18. Loading / enter animations ──────────────────── */
+.messages-loading{animation:fadeUp .25s ease-out}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ── 19. Group chat quality ──────────────────────────── */
+.group-message-bubble{font-size:13px!important;line-height:1.72!important}
+.group-system-message{font-size:11px!important;border-radius:8px}
+.handoff-message{border-radius:10px!important;padding:10px 14px!important}
+.handoff-message strong{font-size:11.5px!important}
+.handoff-message p{font-size:11px!important}
+.group-working{font-size:11px!important;padding:10px 14px!important;border-radius:10px!important}
+
+/* ── 20. Mobile: visible actions, full tap targets ────── */
+@media(max-width:768px){
+  .message-actions{opacity:1!important}
+  .small-icon-button{width:30px!important;height:30px!important}
+  .bot-list-item{min-height:52px}
+  .jump-bottom{padding:10px 16px!important;font-size:12px!important}
+  .chat-header{height:56px!important}
+  .brand-row{height:56px!important}
+}
